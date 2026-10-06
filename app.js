@@ -1,279 +1,310 @@
-let vocabList = JSON.parse(localStorage.getItem('ultraVocabList')) || [];
+let vocabList = JSON.parse(localStorage.getItem('cleanVocabList')) || [];
+let streak = parseInt(localStorage.getItem('cleanStreak')) || 0;
+let learnedCount = 0;
 let currentMode = 'de-en';
 let currentIndex = null;
-let streak = parseInt(localStorage.getItem('ultraStreak')) || 0;
-let learnedCount = 0;
 let editingIndex = null;
 
 // DOM Elements
-const streakEl = document.getElementById('streak-count');
-const progressBar = document.getElementById('progress-bar-fill');
-const progressPercent = document.getElementById('progress-percent');
-const modeBtns = document.querySelectorAll('.mode-btn');
+const streakVal = document.getElementById('streak-val');
+const progressBar = document.getElementById('progress-bar');
+const progressText = document.getElementById('progress-text');
 
-const standardGame = document.getElementById('standard-game');
-const flashcardGame = document.getElementById('flashcard-game');
-const modeLabel = document.getElementById('mode-label');
+// Navigation
+const navItems = document.querySelectorAll('.nav-item');
+const views = document.querySelectorAll('.view');
+
+// Study Controls
+const modeTabs = document.querySelectorAll('.mode-tab');
 const questionText = document.getElementById('question-text');
+const cardTag = document.getElementById('card-tag');
+const typeAnswerBox = document.getElementById('type-answer-box');
+const userInput = document.getElementById('user-input');
+const submitBtn = document.getElementById('submit-btn');
+const quizGrid = document.getElementById('quiz-grid');
 
-const textInputGroup = document.getElementById('text-input-group');
-const answerInput = document.getElementById('answer-input');
-const checkBtn = document.getElementById('check-btn');
-
-const quizOptionsGroup = document.getElementById('quiz-options-group');
-const feedbackMsg = document.getElementById('feedback-msg');
-
-// Flashcards
-const flashcard = document.getElementById('flashcard');
-const fcFront = document.getElementById('fc-front-text');
-const fcBack = document.getElementById('fc-back-text');
+// Flashcard Controls
+const flashcardBox = document.getElementById('flashcard-box');
+const revealBtn = document.getElementById('reveal-btn');
+const revealedAnswer = document.getElementById('revealed-answer');
+const fcActions = document.getElementById('fc-actions');
 const fcWrong = document.getElementById('fc-wrong');
 const fcCorrect = document.getElementById('fc-correct');
+const feedback = document.getElementById('feedback');
 
-// Management
-const importText = document.getElementById('import-text');
-const importBtn = document.getElementById('import-btn');
+// List & Import
+const vocabContainer = document.getElementById('vocab-container');
+const totalCount = document.getElementById('total-count');
 const searchInput = document.getElementById('search-input');
-const vocabListUl = document.getElementById('vocab-list-ul');
-const totalCountEl = document.getElementById('total-count');
 const clearAllBtn = document.getElementById('clear-all-btn');
+const importText = document.getElementById('import-text');
+const runImportBtn = document.getElementById('run-import-btn');
 
 // Modal
 const editModal = document.getElementById('edit-modal');
-const editDe = document.getElementById('edit-de');
-const editEn = document.getElementById('edit-en');
-const saveEditBtn = document.getElementById('save-edit-btn');
-const cancelEditBtn = document.getElementById('cancel-edit-btn');
+const editDeVal = document.getElementById('edit-de-val');
+const editEnVal = document.getElementById('edit-en-val');
+const cancelEdit = document.getElementById('cancel-edit');
+const saveEdit = document.getElementById('save-edit');
 
-// Initialisierung
+// Init
 function init() {
-    streakEl.innerText = streak;
-    updateProgress();
-    renderList();
-    nextQuestion();
+streakVal.innerText = streak;
+updateProgress();
+renderVocabList();
+loadNextCard();
 }
 
 function saveData() {
-    localStorage.setItem('ultraVocabList', JSON.stringify(vocabList));
-    localStorage.setItem('ultraStreak', streak);
-    totalCountEl.innerText = vocabList.length;
-    updateProgress();
-    renderList();
+localStorage.setItem('cleanVocabList', JSON.stringify(vocabList));
+localStorage.setItem('cleanStreak', streak);
+streakVal.innerText = streak;
+totalCount.innerText = vocabList.length;
+updateProgress();
+renderVocabList();
 }
 
 function updateProgress() {
-    if (vocabList.length === 0) {
-        progressBar.style.width = '0%';
-        progressPercent.innerText = '0%';
-        return;
-    }
-    let pct = Math.min(Math.round((learnedCount / vocabList.length) * 100), 100);
-    progressBar.style.width = pct + '%';
-    progressPercent.innerText = pct + '%';
+if (vocabList.length === 0) {
+progressBar.style.width = '0%';
+progressText.innerText = '0%';
+return;
+}
+let pct = Math.min(Math.round((learnedCount / vocabList.length) * 100), 100);
+progressBar.style.width = pct + '%';
+progressText.innerText = pct + '%';
 }
 
-// Modus Wechsel
-modeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        modeBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentMode = btn.dataset.mode;
-        nextQuestion();
-    });
+// Navigation Bar Switching
+navItems.forEach(item => {
+item.addEventListener('click', () => {
+navItems.forEach(n => n.classList.remove('active'));
+views.forEach(v => v.classList.remove('active'));
+
+    item.classList.add('active');
+    document.getElementById(item.dataset.target).classList.add('active');
 });
 
-// Nächste Frage vorbereiten
-function nextQuestion() {
-    feedbackMsg.innerText = '';
-    answerInput.value = '';
-    flashcard.classList.remove('flipped');
 
-    if (vocabList.length === 0) {
-        questionText.innerText = 'Keine Vokabeln vorhanden!';
-        return;
-    }
-
-    currentIndex = Math.floor(Math.random() * vocabList.length);
-    const item = vocabList[currentIndex];
-
-    if (currentMode === 'flashcard') {
-        standardGame.classList.add('hidden');
-        flashcardGame.classList.remove('hidden');
-        fcFront.innerText = item.de;
-        fcBack.innerText = item.en;
-        return;
-    }
-
-    standardGame.classList.remove('hidden');
-    flashcardGame.classList.add('hidden');
-
-    if (currentMode === 'de-en') {
-        modeLabel.innerText = 'Deutsch ➔ Englisch';
-        questionText.innerText = item.de;
-        textInputGroup.classList.remove('hidden');
-        quizOptionsGroup.classList.add('hidden');
-    } else if (currentMode === 'en-de') {
-        modeLabel.innerText = 'Englisch ➔ Deutsch';
-        questionText.innerText = item.en;
-        textInputGroup.classList.remove('hidden');
-        quizOptionsGroup.classList.add('hidden');
-    } else if (currentMode === 'quiz') {
-        modeLabel.innerText = '⚡ 4-Optionen Quiz';
-        questionText.innerText = item.de;
-        textInputGroup.classList.add('hidden');
-        quizOptionsGroup.classList.remove('hidden');
-        setupQuizOptions(item.en);
-    }
-}
-
-// Quiz Optionen Bauen
-function setupQuizOptions(correctAnswer) {
-    quizOptionsGroup.innerHTML = '';
-    let options = [correctAnswer];
-
-    while (options.length < Math.min(4, vocabList.length)) {
-        let randomWord = vocabList[Math.floor(Math.random() * vocabList.length)].en;
-        if (!options.includes(randomWord)) options.push(randomWord);
-    }
-
-    options.sort(() => Math.random() - 0.5);
-
-    options.forEach(opt => {
-        const btn = document.createElement('button');
-        btn.className = 'quiz-option';
-        btn.innerText = opt;
-        btn.onclick = () => handleAnswer(opt.toLowerCase() === correctAnswer.toLowerCase(), correctAnswer);
-        quizOptionsGroup.appendChild(btn);
-    });
-}
-
-// Antworten Auswerten
-function handleAnswer(isCorrect, expected) {
-    if (isCorrect) {
-        feedbackMsg.innerText = '✅ Richtig! Weiter so!';
-        feedbackMsg.style.color = 'var(--accent)';
-        streak++;
-        learnedCount++;
-        streakEl.innerText = streak;
-        saveData();
-        setTimeout(nextQuestion, 1000);
-    } else {
-        feedbackMsg.innerText = `❌ Falsch! Richtig ist: ${expected}`;
-        feedbackMsg.style.color = 'var(--danger)';
-        streak = 0;
-        streakEl.innerText = streak;
-        saveData();
-    }
-}
-
-checkBtn.addEventListener('click', () => {
-    if (currentIndex === null) return;
-    const item = vocabList[currentIndex];
-    const userVal = answerInput.value.trim().toLowerCase();
-    
-    let isCorrect = false;
-    let expected = '';
-
-    if (currentMode === 'de-en') {
-        isCorrect = userVal === item.en.toLowerCase();
-        expected = item.en;
-    } else if (currentMode === 'en-de') {
-        isCorrect = userVal === item.de.toLowerCase();
-        expected = item.de;
-    }
-
-    handleAnswer(isCorrect, expected);
 });
 
-// Flashcard Flip & Events
-flashcard.addEventListener('click', () => flashcard.classList.toggle('flipped'));
-fcCorrect.addEventListener('click', () => handleAnswer(true, ''));
-fcWrong.addEventListener('click', () => handleAnswer(false, ''));
+// Mode Switching Tabs
+modeTabs.forEach(tab => {
+tab.addEventListener('click', () => {
+modeTabs.forEach(t => t.classList.remove('active'));
+tab.classList.add('active');
+currentMode = tab.dataset.mode;
+loadNextCard();
+});
+});
 
-// Import Logik
-importBtn.addEventListener('click', () => {
-    const text = importText.value.trim();
-    if (!text) return;
+// Load Question
+function loadNextCard() {
+feedback.innerText = '';
+userInput.value = '';
+revealedAnswer.classList.add('hidden');
+fcActions.classList.add('hidden');
+revealBtn.classList.remove('hidden');
 
-    const lines = text.split('\n');
-    let added = 0;
+if (vocabList.length === 0) {
+    questionText.innerText = 'Keine Vokabeln vorhanden.';
+    cardTag.innerText = 'Info';
+    typeAnswerBox.classList.add('hidden');
+    quizGrid.classList.add('hidden');
+    flashcardBox.classList.add('hidden');
+    return;
+}
 
-    lines.forEach(line => {
-        const parts = line.split(/[=-:]/);
-        if (parts.length >= 2) {
-            const de = parts[0].trim();
-            const en = parts[1].trim();
-            if (de && en) {
-                vocabList.push({ de, en });
-                added++;
-            }
+currentIndex = Math.floor(Math.random() * vocabList.length);
+const item = vocabList[currentIndex];
+
+if (currentMode === 'de-en') {
+    cardTag.innerText = 'Deutsch ➔ Englisch';
+    questionText.innerText = item.de;
+    typeAnswerBox.classList.remove('hidden');
+    quizGrid.classList.add('hidden');
+    flashcardBox.classList.add('hidden');
+} else if (currentMode === 'en-de') {
+    cardTag.innerText = 'Englisch ➔ Deutsch';
+    questionText.innerText = item.en;
+    typeAnswerBox.classList.remove('hidden');
+    quizGrid.classList.add('hidden');
+    flashcardBox.classList.add('hidden');
+} else if (currentMode === 'quiz') {
+    cardTag.innerText = 'Multiple Choice';
+    questionText.innerText = item.de;
+    typeAnswerBox.classList.add('hidden');
+    quizGrid.classList.remove('hidden');
+    flashcardBox.classList.add('hidden');
+    setupQuiz(item.en);
+} else if (currentMode === 'card') {
+    cardTag.innerText = 'Karteikarte';
+    questionText.innerText = item.de;
+    typeAnswerBox.classList.add('hidden');
+    quizGrid.classList.add('hidden');
+    flashcardBox.classList.remove('hidden');
+}
+
+
+}
+
+function handleResult(isCorrect, answerStr) {
+if (isCorrect) {
+feedback.innerText = '✅ Richtig!';
+feedback.style.color = 'var(--accent-green)';
+streak++;
+learnedCount++;
+saveData();
+setTimeout(loadNextCard, 1000);
+} else {
+feedback.innerText = ❌ Richtig wäre: ${answerStr};
+feedback.style.color = 'var(--accent-red)';
+streak = 0;
+saveData();
+}
+}
+
+// Text Input Submit
+submitBtn.addEventListener('click', () => {
+if (currentIndex === null) return;
+const item = vocabList[currentIndex];
+const val = userInput.value.trim().toLowerCase();
+
+if (currentMode === 'de-en') {
+    handleResult(val === item.en.toLowerCase(), item.en);
+} else {
+    handleResult(val === item.de.toLowerCase(), item.de);
+}
+
+
+});
+
+// Quiz Setup
+function setupQuiz(correctAnswer) {
+quizGrid.innerHTML = '';
+let options = [correctAnswer];
+
+while (options.length < Math.min(4, vocabList.length)) {
+    let rand = vocabList[Math.floor(Math.random() * vocabList.length)].en;
+    if (!options.includes(rand)) options.push(rand);
+}
+
+options.sort(() => Math.random() - 0.5);
+
+options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'quiz-btn';
+    btn.innerText = opt;
+    btn.onclick = () => handleResult(opt.toLowerCase() === correctAnswer.toLowerCase(), correctAnswer);
+    quizGrid.appendChild(btn);
+});
+
+
+}
+
+// Flashcard Events
+revealBtn.addEventListener('click', () => {
+if (currentIndex === null) return;
+revealedAnswer.innerText = vocabList[currentIndex].en;
+revealedAnswer.classList.remove('hidden');
+fcActions.classList.remove('hidden');
+revealBtn.classList.add('hidden');
+});
+
+fcCorrect.addEventListener('click', () => handleResult(true, ''));
+fcWrong.addEventListener('click', () => handleResult(false, vocabList[currentIndex].en));
+
+// Render List & Search
+function renderVocabList() {
+vocabContainer.innerHTML = '';
+const q = searchInput.value.toLowerCase();
+totalCount.innerText = vocabList.length;
+
+vocabList.forEach((item, idx) => {
+    if (item.de.toLowerCase().includes(q) || item.en.toLowerCase().includes(q)) {
+        const card = document.createElement('div');
+        card.className = 'vocab-card';
+        card.innerHTML = `
+            <div class="vocab-info">
+                <span class="vocab-de">${item.de}</span>
+                <span class="vocab-en">${item.en}</span>
+            </div>
+            <div class="vocab-actions">
+                <button class="icon-btn" onclick="openEditModal(${idx})">✏️</button>
+                <button class="icon-btn" onclick="deleteVocabItem(${idx})">🗑️</button>
+            </div>
+        `;
+        vocabContainer.appendChild(card);
+    }
+});
+
+
+}
+
+searchInput.addEventListener('input', renderVocabList);
+
+// Import List
+runImportBtn.addEventListener('click', () => {
+const raw = importText.value.trim();
+if (!raw) return;
+
+const lines = raw.split('\n');
+let added = 0;
+
+lines.forEach(l => {
+    const parts = l.split(/[=-:]/);
+    if (parts.length >= 2) {
+        const de = parts[0].trim();
+        const en = parts[1].trim();
+        if (de && en) {
+            vocabList.push({ de, en });
+            added++;
         }
-    });
-
-    if (added > 0) {
-        importText.value = '';
-        saveData();
-        nextQuestion();
-        alert(`${added} Vokabeln importiert!`);
     }
 });
 
-// Liste & Suche
-function renderList() {
-    vocabListUl.innerHTML = '';
-    const filter = searchInput.value.toLowerCase();
-    totalCountEl.innerText = vocabList.length;
-
-    vocabList.forEach((item, idx) => {
-        if (item.de.toLowerCase().includes(filter) || item.en.toLowerCase().includes(filter)) {
-            const li = document.createElement('li');
-            li.className = 'vocab-item';
-            li.innerHTML = `
-                <span><strong>${item.de}</strong> = ${item.en}</span>
-                <div class="vocab-actions">
-                    <button class="icon-btn" onclick="openEdit(${idx})">✏️</button>
-                    <button class="icon-btn" onclick="deleteVocab(${idx})">❌</button>
-                </div>
-            `;
-            vocabListUl.appendChild(li);
-        }
-    });
+if (added > 0) {
+    importText.value = '';
+    saveData();
+    loadNextCard();
+    alert(`${added} Vokabeln erfolgreich hinzugefügt!`);
 }
 
-searchInput.addEventListener('input', renderList);
 
-// Vokabel Einzel-Bearbeitung (In-Line Modal)
-window.openEdit = function(index) {
-    editingIndex = index;
-    editDe.value = vocabList[index].de;
-    editEn.value = vocabList[index].en;
-    editModal.classList.remove('hidden');
+});
+
+// Edit & Delete
+window.openEditModal = function(index) {
+editingIndex = index;
+editDeVal.value = vocabList[index].de;
+editEnVal.value = vocabList[index].en;
+editModal.classList.remove('hidden');
 };
 
-saveEditBtn.addEventListener('click', () => {
-    if (editingIndex !== null) {
-        vocabList[editingIndex].de = editDe.value.trim();
-        vocabList[editingIndex].en = editEn.value.trim();
-        saveData();
-        editModal.classList.add('hidden');
-        nextQuestion();
-    }
+cancelEdit.addEventListener('click', () => editModal.classList.add('hidden'));
+
+saveEdit.addEventListener('click', () => {
+if (editingIndex !== null) {
+vocabList[editingIndex].de = editDeVal.value.trim();
+vocabList[editingIndex].en = editEnVal.value.trim();
+saveData();
+editModal.classList.add('hidden');
+loadNextCard();
+}
 });
 
-cancelEditBtn.addEventListener('click', () => editModal.classList.add('hidden'));
-
-window.deleteVocab = function(index) {
-    vocabList.splice(index, 1);
-    saveData();
-    nextQuestion();
+window.deleteVocabItem = function(index) {
+vocabList.splice(index, 1);
+saveData();
+loadNextCard();
 };
 
 clearAllBtn.addEventListener('click', () => {
-    if (confirm('Möchtest du wirklich ALLE Vokabeln löschen?')) {
-        vocabList = [];
-        saveData();
-        nextQuestion();
-    }
+if (confirm('Wirklich alle Vokabeln löschen?')) {
+vocabList = [];
+saveData();
+loadNextCard();
+}
 });
 
 init();
