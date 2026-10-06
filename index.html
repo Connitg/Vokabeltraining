@@ -1,54 +1,123 @@
-
-   <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vokabeltrainer Pro</title>
+    <title>Vokabeltrainer Pro Ultra</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>Vokabeltrainer</h1>
-
-        <!-- Massen-Import Sektion -->
-        <details class="import-section">
-            <summary>🚀 Massen-Import / Liste einfügen</summary>
-
-            <p class="hint">Füge hier mehrere Vokabeln ein (Format: <code>Deutsch = Englisch</code> oder <code>Deutsch - Englisch</code>, eine pro Zeile):</p>
-            <textarea id="import-text" rows="6" placeholder="Hund = dog&#10;Katze = cat&#10;Haus = house"></textarea>
-            <button id="import-btn" class="secondary-btn">Liste Importieren</button>
-        </details>
-
-        <hr class="divider">
-
-        <!-- Einzelne Vokabel hinzufügen -->
-        <div class="add-section">
-            <h3>Einzelne Vokabel hinzufügen</h3>
-            <input type="text" id="de-input" placeholder="Deutsches Wort">
-            <input type="text" id="en-input" placeholder="Englische Übersetzung">
-            <button id="add-btn">Hinzufügen</button>
-        </div>
-
-        <hr class="divider">
-
-        <!-- Abfrage-Bereich -->
-        <div class="quiz-section">
-            <h3>Lernen</h3>
-            <div id="card" class="card">
-                <p id="question">Keine Vokabeln vorhanden.</p>
+    <div class="app-container">
+        <!-- Header & Stats -->
+        <header class="app-header">
+            <div class="logo">
+                <span class="icon">⚡</span>
+                <h1>VocabMaster</h1>
             </div>
-            <input type="text" id="answer-input" placeholder="Deine Antwort...">
-            <button id="check-btn">Überprüfen</button>
-            <p id="result-msg"></p>
+            <div class="streak-badge">
+                <span class="fire">🔥</span> <span id="streak-count">0</span> Strähne
+            </div>
+        </header>
+
+        <!-- Fortschrittsbalken -->
+        <div class="progress-card">
+            <div class="progress-info">
+                <span>Lernfortschritt</span>
+                <span id="progress-percent">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div id="progress-bar-fill" class="progress-bar-fill"></div>
+            </div>
         </div>
 
-        <!-- Liste anzeigen / verwalten -->
-        <details class="list-section">
-            <summary>📚 Alle Vokabeln anzeigen (<span id="count">0</span>)</summary>
-            <ul id="vocab-list"></ul>
-            <button id="clear-btn" class="danger-btn">Alle Vokabeln löschen</button>
+        <!-- Modus Auswahl -->
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="de-en">🇩🇪 ➔ 🇬🇧</button>
+            <button class="mode-btn" data-mode="en-de">🇬🇧 ➔ 🇩🇪</button>
+            <button class="mode-btn" data-mode="quiz">⚡ Quiz</button>
+            <button class="mode-btn" data-mode="flashcard">🎴 Karteikarten</button>
+        </div>
+
+        <!-- Lern-Bereich -->
+        <main class="learn-area">
+            <!-- Normaler / Quiz Modus -->
+            <div id="standard-game" class="game-box">
+                <div class="card-prompt">
+                    <span id="mode-label" class="badge">Deutsch</span>
+                    <h2 id="question-text">Lade Vokabeln...</h2>
+                </div>
+
+                <!-- Freitext Eingabe -->
+                <div id="text-input-group" class="input-group">
+                    <input type="text" id="answer-input" placeholder="Antwort eingeben..." autocomplete="off">
+                    <button id="check-btn" class="primary-btn">Prüfen ✨</button>
+                </div>
+
+                <!-- Multiple Choice Quiz Options -->
+                <div id="quiz-options-group" class="quiz-grid hidden">
+                    <!-- Dynamisch generiert -->
+                </div>
+
+                <div id="feedback-msg" class="feedback"></div>
+            </div>
+
+            <!-- Karteikarten Modus -->
+            <div id="flashcard-game" class="flashcard-box hidden">
+                <div id="flashcard" class="flashcard">
+                    <div class="flashcard-inner">
+                        <div class="flashcard-front">
+                            <span class="badge">Frage</span>
+                            <h2 id="fc-front-text">Wort</h2>
+                            <p class="tap-hint">Tippen zum Umdrehen 🔄</p>
+                        </div>
+                        <div class="flashcard-back">
+                            <span class="badge success">Antwort</span>
+                            <h2 id="fc-back-text">Übersetzung</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="fc-controls">
+                    <button id="fc-wrong" class="fc-btn wrong">❌ Gewusst?</button>
+                    <button id="fc-correct" class="fc-btn correct">✅ Gewusst!</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Massen-Import (Einklappbar) -->
+        <details class="collapsible-card">
+            <summary>🚀 Massen-Import / Neue Vokabeln</summary>
+            <div class="import-body">
+                <p class="hint">Format: <code>Deutsch = Englisch</code> (eine pro Zeile)</p>
+                <textarea id="import-text" rows="5" placeholder="Hund = dog&#10;Katze = cat"></textarea>
+                <button id="import-btn" class="accent-btn">Importieren</button>
+            </div>
         </details>
+
+        <!-- Vokabel-Manager & Bearbeitung -->
+        <details class="collapsible-card" open>
+            <summary>📚 Vokabelliste (<span id="total-count">0</span>)</summary>
+            <div class="manager-body">
+                <input type="text" id="search-input" placeholder="🔍 Vokabeln durchsuchen..." class="search-bar">
+                <ul id="vocab-list-ul" class="vocab-list"></ul>
+                <button id="clear-all-btn" class="danger-btn">Alle löschen</button>
+            </div>
+        </details>
+    </div>
+
+    <!-- Edit Modal / Dialog -->
+    <div id="edit-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Vokabel bearbeiten ✏️</h3>
+            <label>Deutsch:</label>
+            <input type="text" id="edit-de">
+            <label>Englisch:</label>
+            <input type="text" id="edit-en">
+            <div class="modal-actions">
+                <button id="save-edit-btn" class="primary-btn">Speichern</button>
+                <button id="cancel-edit-btn" class="secondary-btn">Abbrechen</button>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>
