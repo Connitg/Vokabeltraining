@@ -1,119 +1,56 @@
-<!DOCTYPE html>
+
+   <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>VocabMaster</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vokabeltrainer Pro</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app">
-    <header>
-      <div class="logo">VOCAB<span>MASTER</span></div>
-    </header>
+    <div class="container">
+        <h1>Vokabeltrainer</h1>
 
-    <main id="main-content">
-      <!-- SECTION 1: SCAN -->
-      <section id="scan-sec" class="active">
-        <div class="card">
-          <h2>Tabelle scannen</h2>
-          <p class="desc">Fotografiere deine Vokabeln gut beleuchtet ab.</p>
+        <!-- Massen-Import Sektion -->
+        <details class="import-section">
+            <summary>🚀 Massen-Import / Liste einfügen</summary>
 
-          <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
-          <button class="btn btn-primary btn-hero" onclick="document.getElementById('photo-input').click()">
-            📷 Foto aufnehmen
-          </button>
+            <p class="hint">Füge hier mehrere Vokabeln ein (Format: <code>Deutsch = Englisch</code> oder <code>Deutsch - Englisch</code>, eine pro Zeile):</p>
+            <textarea id="import-text" rows="6" placeholder="Hund = dog&#10;Katze = cat&#10;Haus = house"></textarea>
+            <button id="import-btn" class="secondary-btn">Liste Importieren</button>
+        </details>
 
-          <!-- Bild-Vorschau -->
-          <div id="image-preview-container" class="image-preview" style="display:none;">
-            <img id="image-preview" src="" alt="Vorschau">
-          </div>
+        <hr class="divider">
 
-          <!-- Ladebalken & Status -->
-          <div id="progress-container" class="progress-box" style="display:none;">
-            <div class="progress-info">
-              <span id="status-text">Analysiere Bild...</span>
-              <span id="progress-percent">0%</span>
+        <!-- Einzelne Vokabel hinzufügen -->
+        <div class="add-section">
+            <h3>Einzelne Vokabel hinzufügen</h3>
+            <input type="text" id="de-input" placeholder="Deutsches Wort">
+            <input type="text" id="en-input" placeholder="Englische Übersetzung">
+            <button id="add-btn">Hinzufügen</button>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Abfrage-Bereich -->
+        <div class="quiz-section">
+            <h3>Lernen</h3>
+            <div id="card" class="card">
+                <p id="question">Keine Vokabeln vorhanden.</p>
             </div>
-            <div class="progress-bar-bg">
-              <div id="progress-bar" class="progress-bar-fill"></div>
-            </div>
-          </div>
-
-          <!-- Ergebnis-Feld -->
-          <div id="ocr-result" style="display:none;" class="result-box">
-            <p class="desc">Erkannter Text (Format: <code>Englisch - Deutsch</code>):</p>
-            <textarea id="raw-text" rows="5"></textarea>
-            <div class="button-row">
-              <button class="btn btn-secondary" onclick="swapLanguagesInText()">🔄 En/De drehen</button>
-              <button class="btn btn-success" onclick="parseAndSaveVocab()">💾 Speichern</button>
-            </div>
-          </div>
+            <input type="text" id="answer-input" placeholder="Deine Antwort...">
+            <button id="check-btn">Überprüfen</button>
+            <p id="result-msg"></p>
         </div>
-      </section>
 
-      <!-- SECTION 2: ADD MANUAL -->
-      <section id="add-sec">
-        <div class="card">
-          <h2>Einzelne Vokabel hinzufügen</h2>
-          <div class="field">
-            <label>Englisch</label>
-            <input type="text" id="manual-en" placeholder="z.B. resilience">
-          </div>
-          <div class="field">
-            <label>Deutsch</label>
-            <input type="text" id="manual-de" placeholder="z.B. Widerstandsfähigkeit">
-          </div>
-          <button class="btn btn-success" onclick="addSingleVocab()">Hinzufügen</button>
-        </div>
-      </section>
+        <!-- Liste anzeigen / verwalten -->
+        <details class="list-section">
+            <summary>📚 Alle Vokabeln anzeigen (<span id="count">0</span>)</summary>
+            <ul id="vocab-list"></ul>
+            <button id="clear-btn" class="danger-btn">Alle Vokabeln löschen</button>
+        </details>
+    </div>
 
-      <!-- SECTION 3: CARDS -->
-      <section id="cards-sec">
-        <div id="flashcard" class="flashcard" onclick="flipCard()">
-          <span id="card-lvl" class="lvl-badge">Level 1</span>
-          <div id="card-content">Lade...</div>
-          <span class="hint-text">Tippen zum Umdrehen</span>
-        </div>
-        <div id="card-controls" class="controls-row" style="display:none;">
-          <button class="btn btn-danger" onclick="rateCard(false)">❌ Falsch</button>
-          <button class="btn btn-success" onclick="rateCard(true)">✅ Richtig</button>
-        </div>
-      </section>
-
-      <!-- SECTION 4: QUIZ -->
-      <section id="quiz-sec">
-        <div class="card quiz-card">
-          <h2>Tipp-Quiz</h2>
-          <p class="desc">Übersetze auf Deutsch:</p>
-          <div id="quiz-prompt" class="quiz-target">-</div>
-          <input type="text" id="quiz-input" placeholder="Antwort eintippen..." autocomplete="off">
-          <button class="btn btn-primary" onclick="checkAnswer()">Prüfen</button>
-          <div id="quiz-feedback" class="feedback-text"></div>
-        </div>
-      </section>
-
-      <!-- SECTION 5: LIST -->
-      <section id="list-sec">
-        <div class="card">
-          <h2>Gespeicherte Vokabeln</h2>
-          <ul id="vocab-list" class="vocab-list"></ul>
-          <button class="btn btn-danger-outline" onclick="clearVocab()">Alle Vokabeln löschen</button>
-        </div>
-      </section>
-    </main>
-
-    <!-- Bottom Navigation Bar -->
-    <nav class="bottom-nav">
-      <button onclick="navTo('scan-sec', this)" class="active">📷 <span>Scan</span></button>
-      <button onclick="navTo('add-sec', this)">➕ <span>Neu</span></button>
-      <button onclick="navTo('cards-sec', this)">🃏 <span>Karten</span></button>
-      <button onclick="navTo('quiz-sec', this)">✍️ <span>Quiz</span></button>
-      <button onclick="navTo('list-sec', this)">📚 <span><span id="vocab-count">0</span></span></button>
-    </nav>
-  </div>
-
-  <script src="app.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
